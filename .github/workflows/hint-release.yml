@@ -1,0 +1,110 @@
+name: Release sorbet-static (hint)
+
+on:
+  push:
+    tags: ['hint-v*']
+
+permissions:
+  contents: read
+
+jobs:
+  version:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: version
+        run: |
+          git fetch --no-tags https://github.com/sorbet/sorbet.git master:upstream-master
+          base=$(git merge-base HEAD upstream-master)
+          prefix=$(.buildkite/tools/sorbet-version-prefix.sh)
+          version="${prefix}.$(git rev-list --count "$base")"
+          tagged="${GITHUB_REF_NAME#hint-v}"
+          if [ "$version" != "$tagged" ]; then
+            echo "::error::Tag says $tagged but the upstream base $base is $version"
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  linux:
+    needs: version
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      - name: Free disk for Bazel
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+      - uses: actions/checkout@v4
+      - run: ./bazel build //main:sorbet --strip=always --config=release-linux
+      - run: |
+          mkdir -p gems/sorbet-static/libexec
+          cp bazel-bin/main/sorbet gems/sorbet-static/libexec/sorbet
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.4'
+      - name: Build gem
+        working-directory: gems/sorbet-static
+        run: |
+          sed -i "s/0\\.0\\.0/${{ needs.version.outputs.version }}/" sorbet-static.gemspec
+          sed -i "\$i\\  s.metadata['github_repo'] = 'ssh://github.com/hinthealth/sorbet'" sorbet-static.gemspec
+          gem build sorbet-static.gemspec
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gem-linux
+          path: gems/sorbet-static/*.gem
+
+  mac:
+    needs: version
+    runs-on: macos-14
+    timeout-minutes: 240
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install autoconf
+      - run: |
+          ./bazel build //main:sorbet --strip=always --config=release-mac
+          cp bazel-bin/main/sorbet sorbet.darwin-arm64
+          ./bazel build //main:sorbet --strip=always --config=release-mac --config=cross-to-darwin-x86_64
+          cp bazel-bin/main/sorbet sorbet.darwin-x86_64
+          mkdir -p gems/sorbet-static/libexec
+          lipo -create -output gems/sorbet-static/libexec/sorbet sorbet.darwin-*
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.4'
+      - name: Build gem
+        working-directory: gems/sorbet-static
+        run: |
+          sed -i '' "s/0\\.0\\.0/${{ needs.version.outputs.version }}/" sorbet-static.gemspec
+          sed -i '' "s/Gem::Platform::CURRENT/'universal-darwin'/" sorbet-static.gemspec
+          sed -i '' "\$i\\
+            s.metadata['github_repo'] = 'ssh://github.com/hinthealth/sorbet'
+          " sorbet-static.gemspec
+          gem build sorbet-static.gemspec
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gem-mac
+          path: gems/sorbet-static/*.gem
+
+  publish:
+    needs: [linux, mac]
+    runs-on: ubuntu-24.04
+    permissions:
+      packages: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.4'
+      - name: Push to GitHub Packages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p ~/.gem
+          printf -- "---\n:github: Bearer %s\n" "$GITHUB_TOKEN" > ~/.gem/credentials
+          chmod 0600 ~/.gem/credentials
+          for gem in *.gem; do
+            gem push --key github --host https://rubygems.pkg.github.com/hinthealth "$gem"
+          done
