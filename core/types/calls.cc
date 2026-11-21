@@ -1624,6 +1624,8 @@ DispatchResult dispatchCallSymbol(const GlobalState &gs, const DispatchArgs &arg
         auto blockType = Types::resultTypeAsSeenFrom(gs, blockParam.type, methodData->owner, symbol, targs);
         if (!blockType) {
             blockType = Types::untyped(method);
+        } else {
+            blockType = Types::replaceSelfType(gs, blockType, args.selfType);
         }
 
         // Only report "does not expect a block" error if the method is defined in a `typed: strict`
