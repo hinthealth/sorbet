@@ -392,6 +392,24 @@ TypePtr OrType::_replaceSelfType(const GlobalState &gs, const TypePtr &receiver)
     return nullptr;
 }
 
+TypePtr AppliedType::_replaceSelfType(const GlobalState &gs, const TypePtr &receiver) const {
+    optional<vector<TypePtr>> newTargs;
+    for (size_t i = 0; i < this->targs.size(); i++) {
+        auto replaced = this->targs[i]._replaceSelfType(gs, receiver);
+        if (replaced == nullptr) {
+            continue;
+        }
+        if (!newTargs.has_value()) {
+            newTargs = this->targs;
+        }
+        (*newTargs)[i] = move(replaced);
+    }
+    if (!newTargs.has_value()) {
+        return nullptr;
+    }
+    return make_type<AppliedType>(this->klass, move(*newTargs));
+}
+
 TypePtr AndType::_replaceSelfType(const GlobalState &gs, const TypePtr &receiver) const {
     auto left = this->left._replaceSelfType(gs, receiver);
     auto right = this->right._replaceSelfType(gs, receiver);
