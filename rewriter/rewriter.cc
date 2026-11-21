@@ -22,6 +22,7 @@
 #include "rewriter/MixinEncryptedProp.h"
 #include "rewriter/ModuleFunction.h"
 #include "rewriter/PackageSpec.h"
+#include "rewriter/ProcReturnType.h"
 #include "rewriter/Prop.h"
 #include "rewriter/Rails.h"
 #include "rewriter/Struct.h"
@@ -144,7 +145,10 @@ public:
                     }
                 },
 
-                [&](ast::MethodDef &mdef) { Initializer::run(ctx, &mdef, prevStat); },
+                [&](ast::MethodDef &mdef) {
+                    Initializer::run(ctx, &mdef, prevStat);
+                    ProcReturnType::run(ctx, &mdef, prevStat);
+                },
 
                 [&](const ast::ExpressionPtr &e) {});
 
