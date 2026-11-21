@@ -11,6 +11,7 @@ jobs:
   version:
     runs-on: ubuntu-24.04
     outputs:
+      upstream: ${{ steps.version.outputs.upstream }}
       version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
@@ -21,13 +22,14 @@ jobs:
           git fetch --no-tags https://github.com/sorbet/sorbet.git master:upstream-master
           base=$(git merge-base HEAD upstream-master)
           prefix=$(.buildkite/tools/sorbet-version-prefix.sh)
-          version="${prefix}.$(git rev-list --count "$base")"
+          upstream="${prefix}.$(git rev-list --count "$base")"
           tagged="${GITHUB_REF_NAME#hint-v}"
-          if [ "$version" != "$tagged" ]; then
-            echo "::error::Tag says $tagged but the upstream base $base is $version"
+          if [[ ! "$tagged" =~ ^${upstream//./\\.}\.[0-9]+$ ]]; then
+            echo "::error::Tag says $tagged; it must be the upstream base $upstream plus a release number, e.g. $upstream.1"
             exit 1
           fi
-          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "upstream=$upstream" >> "$GITHUB_OUTPUT"
+          echo "version=$tagged" >> "$GITHUB_OUTPUT"
 
   linux:
     needs: version
@@ -83,13 +85,18 @@ jobs:
           path: gems/sorbet-static/*.gem
 
   publish:
-    needs: [linux, mac]
+    needs: [version, linux, mac]
     runs-on: ubuntu-24.04
     permissions:
       contents: write
     env:
       KEEP_VERSIONS: 6
+      VERSION: ${{ needs.version.outputs.version }}
+      UPSTREAM: ${{ needs.version.outputs.upstream }}
     steps:
+      - uses: actions/checkout@v4
+        with:
+          path: src
       - uses: actions/checkout@v4
         with:
           ref: gh-pages
@@ -102,6 +109,14 @@ jobs:
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.4'
+      - name: Build sorbet and sorbet-static-and-runtime
+        run: |
+          (cd src/gems/sorbet && sed -i "s/0\\.0\\.0/$VERSION/g" sorbet.gemspec && gem build sorbet.gemspec)
+          (cd src/gems/sorbet-static-and-runtime \
+            && sed -i "s/'sorbet-runtime', '0\\.0\\.0'/'sorbet-runtime', '$UPSTREAM'/" sorbet-static-and-runtime.gemspec \
+            && sed -i "s/0\\.0\\.0/$VERSION/g" sorbet-static-and-runtime.gemspec \
+            && gem build sorbet-static-and-runtime.gemspec)
+          mv src/gems/sorbet/*.gem src/gems/sorbet-static-and-runtime/*.gem new/
       - name: Build the gem index
         run: |
           mkdir -p index/gems
@@ -109,7 +124,7 @@ jobs:
           cp new/*.gem index/gems/
           ruby -e '
             versions = Dir["index/gems/*.gem"]
-              .group_by { File.basename(it)[/sorbet-static-([\d.]+)-/, 1] }
+              .group_by { File.basename(it, ".gem")[/-(\d+(?:\.\d+)+)(?:-|\z)/, 1] }
             keep = versions.keys.sort_by { Gem::Version.new(it) }.last(Integer(ENV.fetch("KEEP_VERSIONS")))
             versions.each { |version, files| File.delete(*files) unless keep.include?(version) }
           '
