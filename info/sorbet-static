@@ -1,0 +1,5 @@
+---
+0.6.13616-universal-darwin |checksum:FgTvmnTF3r1A3eHik809ZPjsWZxNuFY6rOZbPuqI0Xg=,ruby:>= 3.0.0
+0.6.13616-x86_64-linux |checksum:hkci3UwK7W7MGT0ujuqZHbKJ8wbsiN7TGmJFxztNWSA=,ruby:>= 3.0.0
+0.6.13616.1-universal-darwin |checksum:ihczjeWp93ecnQCvGqWxL23BnOS+pSVsjJERJek/NWI=,ruby:>= 3.0.0
+0.6.13616.1-x86_64-linux |checksum:P0kQp4C0DDOufm9Bn1Q9E1IEjpRf8Wd0CkWSqPCBDHo=,ruby:>= 3.0.0
