@@ -1,0 +1,5 @@
+created_at: 2026-11-24T19:18:59+00:00
+---
+sorbet 0.6.13616.1,0.6.13616.2,0.6.13616.3,0.6.13616.4 5c8987ee63c03da75fd60b8f34aba54a
+sorbet-static 0.6.13616.1-universal-darwin,0.6.13616.1-x86_64-linux,0.6.13616.2-universal-darwin,0.6.13616.2-x86_64-linux,0.6.13616.3-universal-darwin,0.6.13616.3-x86_64-linux,0.6.13616.4-universal-darwin,0.6.13616.4-x86_64-linux 280c06c7de66296c61d41668f558ec80
+sorbet-static-and-runtime 0.6.13616.1,0.6.13616.2,0.6.13616.3,0.6.13616.4 dc7121dd83cf5b76d9b68180e2361c97

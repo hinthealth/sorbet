@@ -1,0 +1,5 @@
+---
+0.6.13616.1 sorbet:= 0.6.13616.1,sorbet-runtime:= 0.6.13616|checksum:UC4xqnVsU72RbD6oMIXsTptT2Vu+WC+jP7ny+hrsQz0=,ruby:>= 3.0.0
+0.6.13616.2 sorbet:= 0.6.13616.2,sorbet-runtime:= 0.6.13616|checksum:bICtiogJjenBww2OVKQhe0e7BURYofKArPKEBKzLn4A=,ruby:>= 3.0.0
+0.6.13616.3 sorbet:= 0.6.13616.3,sorbet-runtime:= 0.6.13616|checksum:Cp+YvFJon2sdoH8xoW9gUp/7j7tLhoNvU8j1H4cwCjE=,ruby:>= 3.0.0
+0.6.13616.4 sorbet:= 0.6.13616.4,sorbet-runtime:= 0.6.13616|checksum:7eHTFOxMX5Pgc3hsedZHh6HrCbu8CB+5vEyuOcrpgtQ=,ruby:>= 3.0.0
