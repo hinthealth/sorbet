@@ -34,6 +34,10 @@ bool isMissingInitialize(const core::GlobalState &gs, const ast::Send *send) {
                 return false;
             }
         }
+    } else if (auto methodDef = ast::cast_tree<ast::MethodDef>(block->body)) {
+        if (methodDef->name == core::Names::initialize()) {
+            return false;
+        }
     }
 
     return true;
